@@ -89,82 +89,46 @@ def data_trans(input_file):
 
     assert len(text_list) == len(tag_list)
 
-    return text_list, tag_list
+    return new_list, text_list, tag_list
 
 
 
 
 
-def create_dico(item_list):
-    """
-    对于item_list中的每一个items，统计items中item在item_list中的次数
-    item:出现的次数
-    :param item_list:
-    :return:
-    """
-    assert type(item_list) is list
-    dico = {}
-    for items in item_list:
-        for item in items:
-            if item not in dico: #第一次出现，标记为1
-                dico[item] = 1
-            else:
-                dico[item] += 1
-    return dico
+def spo_generate(new_list, text_list):
+    data_list = []
 
-def create_mapping(dico):
-    """
-    创建item to id, id_to_item
-    item的排序按词典中出现的次数
-    :param dico:
-    :return:
-    """
-    sorted_items = sorted(dico.items(), key=lambda x: (-x[1], x[0]))
-    id_to_item = {i: v[0] for i, v in enumerate(sorted_items)}
-    item_to_id = {v: k for k, v in id_to_item.items()}
-    return item_to_id, id_to_item
+    for idx, value in enumerate(new_list):
+        data = {}
+        spo_list = []
+        data['text'] = text_list[idx]
+        sym_list = value['symptom']
+        for sym in sym_list.keys():
+            if sym_list[sym]['has_problem'] == True:
+                break
+            subject = sym_list[sym]['self']['val']
+            SUB_VAL = sym_list[sym]['subject']['val']
+            BOD_VAL = sym_list[sym]['body']['val']
+            DEC_VAL = sym_list[sym]['decorate']['val']
+            FRE_VAL = sym_list[sym]['frequency']['val']
+            ITE_VAL = sym_list[sym]['item']['val']
+            DIS_VAL = sym_list[sym]['disease']['val']
 
+            if SUB_VAL != '':
+                spo_list.append([subject, 'SUB', SUB_VAL])
+            if BOD_VAL != '':
+                spo_list.append([subject, 'BOD', BOD_VAL])
+            if DEC_VAL != '':
+                spo_list.append([subject, 'DEC', DEC_VAL])
+            if FRE_VAL != '':
+                spo_list.append([subject, 'FRE', FRE_VAL])
+            if ITE_VAL != '':
+                spo_list.append([subject, 'ITE', ITE_VAL])
+            if DIS_VAL != '':
+                spo_list.append([subject, 'DIS', DIS_VAL])
 
-def word_mapping(sentences):
-    """
-    构建字典
-    :param sentences:
-    :return:
-    """
-    word_list = [[x for x in s] for s in sentences]  # 得到所有的字
-    dico = create_dico(word_list)
-    dico['<PAD>'] = 10000001
-    dico['<UNK>'] = 10000000
-    word_to_id, id_to_word = create_mapping(dico)
-    return dico, word_to_id, id_to_word
+        data['spo_list'] = spo_list
+        data_list.append(data)
 
-
-def tag_mapping(tag_sentences):
-    """
-    构建标签字典
-    :param sentences:
-    :return:
-    """
-    tag_list = [[x for x in s] for s in tag_sentences]
-    dico = create_dico(tag_list)
-    tag_to_id, id_to_tag = create_mapping(dico)
-    return dico, tag_to_id, id_to_tag
-
-
-sents, tags = data_trans('dataset/test.txt')
-
-print(sents[0])
-print(tags[0])
-
-#with open('dataset/train_text.txt', 'r') as f:
-#    content = f.read()
-#sentences = content.split('\n')
-#sentences.pop(-1)
-#print(len(sentences))  #4145
-#print(len(data_list))
-
-#dico, word_to_id, id_to_word = word_mapping(sentences)
-#print(word_to_id)
-
-#data_tag_trans(data_list, sentences, 'train_tag.txt')
+    return data_list
 
