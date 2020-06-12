@@ -1,0 +1,6 @@
+{"object_type": "subject", "predicate": "SUB", "subject_type": "sym"}
+{"object_type": "body", "predicate": "BOD", "subject_type": "sym"}
+{"object_type": "decorate", "predicate": "DEC", "subject_type": "sym"}
+{"object_type": "frequency", "predicate": "FRE", "subject_type": "sym"}
+{"object_type": "item", "predicate": "ITE", "subject_type": "sym"}
+{"object_type": "disease", "predicate": "DIS", "subject_type": "sym"}
