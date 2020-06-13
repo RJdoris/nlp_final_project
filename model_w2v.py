@@ -2,7 +2,7 @@
 # coding:utf-8
 # Author: Qiao Ruijie
 
-import json
+import keras
 import numpy as np
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
@@ -71,7 +71,7 @@ def w2v ():
     dev_X = pad_sequences(dev_X, maxlen=MAX_SEQ_LEN, padding='post')
     test_X = pad_sequences(test_X, maxlen=MAX_SEQ_LEN, padding='post')
 
-    model = Word2Vec(sentences, size=100, min_count=3)
+    model = Word2Vec(sentences, size=50, min_count=2)
     # word_vec_dict = dict((k, model.wv[k]) for k, v in model.wv.vocab.items())
     # model.save( 'word2vec')
 
@@ -81,7 +81,7 @@ def w2v ():
         if embedding_vector is not None:
             embedding_word2vec_matrix[i] = embedding_vector
         else:
-            unk_vec = np.random.random(100) * 0.5
+            unk_vec = np.random.random(50) * 0.5
             unk_vec = unk_vec - unk_vec.mean()
             embedding_word2vec_matrix[i] = unk_vec
 
@@ -129,7 +129,7 @@ def build_model(max_para_length, n_tags, embedding_matrix):
         input_length=MAX_SEQ_LEN,
         weights=[embedding_matrix],
         trainable=False)
-    bi_lstm_layer = Bidirectional(LSTM(128, return_sequences=True))
+    bi_lstm_layer = Bidirectional(LSTM(64, return_sequences=True))
     bi_lstm_drop_layer = Dropout(0.5)
     dense_layer = TimeDistributed(Dense(n_tags, activation="softmax"))
     crf_layer = CRF(n_tags)
@@ -142,7 +142,8 @@ def build_model(max_para_length, n_tags, embedding_matrix):
     crf = crf_layer(dense)
 
     model = Model(input=[input], output=[crf])
-    model.compile(optimizer='adam', loss=crf_layer.loss_function, metrics=[crf_layer.accuracy])
+    optmr = keras.optimizers.Adam(lr=0.001, beta_1=0.5)
+    model.compile(optimizer=optmr, loss=crf_layer.loss_function, metrics=[crf_layer.accuracy])
 
 
 
@@ -177,7 +178,7 @@ def train_model():
     model = build_model(MAX_SEQ_LEN, len(label_id_dict.keys())+1, embedding_matrix)
     history = model.fit(train_x, train_y, validation_data=(dev_x, dev_y), batch_size=16, epochs=10)
 
-    model.save("lstm_crf_ner_0610_3.h5")
+    model.save("lstm_crf_w2v_ner.h5")
 
     # 绘制loss和acc图像
     plt.subplot(2, 1, 1)
@@ -191,7 +192,7 @@ def train_model():
     plt.plot(range(epochs), history.history['crf_viterbi_accuracy'], label='crf_viterbi_accuracy')
     plt.plot(range(epochs), history.history['val_crf_viterbi_accuracy'], label='val_crf_viterbi_accuracy')
     plt.legend()
-    plt.savefig("lstm_crf_loss_acc_0610_3.png")
+    plt.savefig("lstm_crf_w2v_loss_acc.png")
 
     # 模型在测试集上的表现
     """
