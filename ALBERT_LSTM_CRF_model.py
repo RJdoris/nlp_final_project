@@ -13,10 +13,20 @@ from keras.utils import to_categorical, plot_model
 from seqeval.metrics import classification_report
 import matplotlib.pyplot as plt
 
-from utils import event_type
-from utils import MAX_SEQ_LEN, train_file_path, test_file_path, dev_file_path
-from load_data import read_data
+
 from albert_zh.extract_feature import BertVector
+
+
+from dataset import data_trans
+
+
+
+MAX_SEQ_LEN = 200 #训练集中最长语句长度为1080
+
+# 读取训练集，验证集和测试集原始数据
+_, origin_train_X, origin_train_y = data_trans('dataset/train.txt')
+_, origin_dev_X, origin_dev_y = data_trans('dataset/dev.txt')
+_, origin_test_X, origin_test_y = data_trans('dataset/test.txt')
 
 from tqdm import tqdm
 
@@ -25,18 +35,31 @@ bert_model = BertVector(pooling_strategy="NONE", max_seq_len=MAX_SEQ_LEN)
 f = lambda text: bert_model.encode([text])["encodes"][0]
 
 # 读取label2id字典
-with open("%s_label2id.json" % event_type, "r", encoding="utf-8") as h:
-    label_id_dict = json.loads(h.read())
+label_id_dict = {
+  "O": 1,
+  "B-SUB": 2,
+  "I-SUB": 3,
+  "B-BOD": 4,
+  "I-BOD": 5,
+  "B-DEC": 6,
+  "I-DEC": 7,
+  "B-FRE": 8,
+  "I-FRE": 9,
+  "B-ITE": 10,
+  "I-ITE": 11,
+  "B-DIS": 12,
+  "I-DIS": 13,
+}
 
 id_label_dict = {v:k for k,v in label_id_dict.items()}
 
 
 # 载入数据
-def input_data(file_path):
+def input_data(sentences, tags):
 
-    sentences, tags = read_data(file_path)
-    print("sentences length: %s " % len(sentences))
-    print("last sentence: ", sentences[-1])
+    #sentences, tags = read_data(file_path)
+    #print("sentences length: %s " % len(sentences))
+    #print("last sentence: ", sentences[-1])
 
     # ALBERT ERCODING
     print("start ALBERT encding")
@@ -85,7 +108,7 @@ def build_model(max_para_length, n_tags):
 
     # 模型结构总结
     model.summary()
-    plot_model(model, to_file="albert_bi_lstm.png", show_shapes=True)
+    #plot_model(model, to_file="albert_bi_lstm.png", show_shapes=True)
 
     return model
 
@@ -94,15 +117,15 @@ def build_model(max_para_length, n_tags):
 def train_model():
 
     # 读取训练集，验证集和测试集数据
-    train_x, train_y = input_data(train_file_path)
-    dev_x, dev_y = input_data(dev_file_path)
-    test_x, test_y = input_data(test_file_path)
+    train_x, train_y = input_data(origin_train_X, origin_train_y)
+    dev_x, dev_y = input_data(origin_dev_X, origin_dev_y)
+    test_x, test_y = input_data(origin_test_X, origin_test_y)
 
     # 模型训练
     model = build_model(MAX_SEQ_LEN, len(label_id_dict.keys())+1)
     history = model.fit(train_x, train_y, validation_data=(dev_x, dev_y), batch_size=16, epochs=10)
 
-    model.save("%s_ner.h5" % event_type)
+    model.save("albert_ner.h5")
 
     # 绘制loss和acc图像
     plt.subplot(2, 1, 1)
@@ -116,7 +139,7 @@ def train_model():
     plt.plot(range(epochs), history.history['crf_viterbi_accuracy'], label='crf_viterbi_accuracy')
     plt.plot(range(epochs), history.history['val_crf_viterbi_accuracy'], label='val_crf_viterbi_accuracy')
     plt.legend()
-    plt.savefig("%s_loss_acc.png" % event_type)
+    plt.savefig("albert_loss_acc.png")
 
     # 模型在测试集上的表现
     # 预测标签
@@ -126,7 +149,7 @@ def train_model():
         pred_tags.append([id_label_dict[_] for _ in y[i] if _])
 
     # 因为存在预测的标签长度与原来的标注长度不一致的情况，因此需要调整预测的标签
-    test_sents, test_tags = read_data(test_file_path)
+    test_sents, test_tags = origin_test_X, origin_test_y
     final_tags = []
     for test_tag, pred_tag in zip(test_tags, pred_tags):
         if len(test_tag) == len(pred_tag):
