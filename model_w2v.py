@@ -75,7 +75,7 @@ def w2v ():
     # word_vec_dict = dict((k, model.wv[k]) for k, v in model.wv.vocab.items())
     # model.save( 'word2vec')
 
-    embedding_word2vec_matrix = np.zeros((len(word_index) + 1, 100))
+    embedding_word2vec_matrix = np.zeros((len(word_index) + 1, 50))
     for word, i in word_index.items():
         embedding_vector = model[word] if word in model else None
         if embedding_vector is not None:
