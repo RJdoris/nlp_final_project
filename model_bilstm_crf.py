@@ -23,7 +23,7 @@ from dataset import data_trans
 
 
 
-MAX_SEQ_LEN = 1000 #训练集中最长语句长度为1080
+MAX_SEQ_LEN = 200 #训练集中最长语句长度为1080
 
 # 读取训练集，验证集和测试集原始数据
 _, origin_train_X, origin_train_y = data_trans('dataset/train.txt')

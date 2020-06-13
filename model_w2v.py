@@ -25,12 +25,12 @@ from dataset import data_trans
 
 from tqdm import tqdm
 
-MAX_SEQ_LEN = 1000 #训练集中最长语句长度为1080
+MAX_SEQ_LEN = 200 #训练集中最长语句长度为1080
 
 # 读取训练集，验证集和测试集原始数据
-origin_train_X, origin_train_y = data_trans('dataset/train.txt')
-origin_dev_X, origin_dev_y = data_trans('dataset/dev.txt')
-origin_test_X, origin_test_y = data_trans('dataset/test.txt')
+_, origin_train_X, origin_train_y = data_trans('dataset/train.txt')
+_, origin_dev_X, origin_dev_y = data_trans('dataset/dev.txt')
+_, origin_test_X, origin_test_y = data_trans('dataset/test.txt')
 
 
 # 利用ALBERT提取文本特征
