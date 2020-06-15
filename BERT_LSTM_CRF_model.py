@@ -9,6 +9,7 @@ from keras_contrib.losses import crf_loss
 from keras_contrib.metrics import crf_accuracy, crf_viterbi_accuracy
 from keras.models import Model, Input
 from keras.layers import Dense, Bidirectional, Dropout, LSTM, TimeDistributed, Masking
+from keras.callbacks import EarlyStopping
 from keras.utils import to_categorical, plot_model
 from seqeval.metrics import classification_report
 import matplotlib.pyplot as plt
@@ -24,7 +25,7 @@ MAX_SEQ_LEN = 200 #训练集中最长语句长度为1080
 _, origin_test_X, origin_test_y = data_trans('dataset/test.txt')
 
 # 读取训练集，验证集和测试集编码数据
-"""with open('dataset/train_encode_text.txt', 'rb') as f:
+with open('dataset/train_encode_text.txt', 'rb') as f:
     train_x = pickle.load(f)
 
 with open('dataset/train_encode_tag.txt', 'rb') as f:
@@ -35,15 +36,10 @@ with open('dataset/dev_encode_text.txt', 'rb') as f:
 
 with open('dataset/dev_encode_tag.txt', 'rb') as f:
     dev_y = pickle.load(f)
-"""
 
-#with open('dataset/test_encode_text.txt', 'rb') as f:
-with open('dataset/encode_text.txt', 'rb') as f:
+with open('dataset/test_encode_text.txt', 'rb') as f:
     test_x = pickle.load(f)
 
-#with open('dataset/test_encode_tag.txt', 'rb') as f:
-with open('dataset/encode_tag.txt', 'rb') as f:
-    test_y = pickle.load(f)
 
 
 # 读取label2id字典
@@ -95,10 +91,11 @@ def train_model():
 
     # 模型训练
     model = build_model(MAX_SEQ_LEN, len(label_id_dict.keys())+1)
-    #history = model.fit(train_x, train_y, validation_data=(dev_x, dev_y), batch_size=16, epochs=5)
-    history = model.fit(test_x, test_y, batch_size=16, epochs=5)
+    # early stopping
+    early_stopping = EarlyStopping(monitor='val_accuracy', patience=5, mode='max')
+    history = model.fit(train_x, train_y, validation_data=(dev_x, dev_y), batch_size=16, epochs=50, callbacks=[early_stopping])
 
-    model.save("models/bert_ner_toy.h5")
+    model.save("models/bert_ner_e50.h5")
 
     # 绘制loss和acc图像
     plt.subplot(2, 1, 1)
@@ -112,11 +109,11 @@ def train_model():
     plt.plot(range(epochs), history.history['crf_viterbi_accuracy'], label='crf_viterbi_accuracy')
     plt.plot(range(epochs), history.history['val_crf_viterbi_accuracy'], label='val_crf_viterbi_accuracy')
     plt.legend()
-    plt.savefig("models/bert_loss_acc_toy.png")
+    plt.savefig("models/bert_loss_acc_e50.png")
 
     # 模型在测试集上的表现
     # 预测标签
-    """
+
     y = np.argmax(model.predict(test_x), axis=2)
     pred_tags = []
     for i in range(y.shape[0]):
@@ -134,7 +131,7 @@ def train_model():
             final_tags.append(pred_tag + ['O'] * (len(test_tag) - len(pred_tag)))
 
     # 利用seqeval对测试集进行验证
-    print(classification_report(test_tags, final_tags, digits=4))"""
+    print(classification_report(test_tags, final_tags, digits=4))
 
 
 if __name__ == '__main__':
