@@ -33,6 +33,8 @@ dev_data=read_data("dataset_pro/dev.csv")
 test_data=read_data("dataset_pro/test.csv")
 word2id=read_dictionary("dataset_pro/train.pkl")
 
+
+
 train_X, train_Y = data_generate(train_data,word2id,label2id)
 dev_X, dev_Y = data_generate(dev_data,word2id,label2id)
 test_X, test_Y = data_generate(test_data,word2id,label2id)
@@ -41,6 +43,7 @@ test_X, test_Y = data_generate(test_data,word2id,label2id)
 # 利用ALBERT提取文本特征
 
 # label2id字典
+"""
 label_id_dict = {
   "O": 1,
   "B-SUB": 2,
@@ -56,8 +59,8 @@ label_id_dict = {
   "B-DIS": 12,
   "I-DIS": 13,
 }
-
-id_label_dict = {v:k for k,v in label_id_dict.items()}
+"""
+id_label_dict = {v:k for k,v in label2id.items()}
 
 #词向量训练,返回序列化的输入值和embedding矩阵
 def w2v ():
@@ -105,11 +108,11 @@ def one_hot_trans(tags):
     np.array(new_y)
 
     # 将y中的元素编码成ont-hot encoding
-    y = np.empty(shape=(len(tags), MAX_SEQ_LEN, len(label_id_dict.keys())+1))
+    y = np.empty(shape=(len(tags), MAX_SEQ_LEN, len(label2id.keys())+1))
 
 
     for i, seq in enumerate(new_y):
-        y[i, :, :] = to_categorical(seq, num_classes=len(label_id_dict.keys())+1)
+        y[i, :, :] = to_categorical(seq, num_classes=len(label2id.keys())+1)
 
     return y
 
@@ -162,7 +165,7 @@ def train_model():
 
 
     # 模型训练
-    model = build_model(MAX_SEQ_LEN, len(label_id_dict.keys())+1, embedding_matrix)
+    model = build_model(MAX_SEQ_LEN, len(label2id.keys())+1, embedding_matrix)
     history = model.fit(train_x, train_y, validation_data=(dev_x, dev_y), batch_size=32, epochs=60)
 
     model.save("lstm_crf_w2v_ner_0618.h5")
@@ -184,14 +187,19 @@ def train_model():
     # 模型在测试集上的表现
    
     # 预测标签
-    """
+
     y = np.argmax(model.predict(test_x), axis=2)
     pred_tags = []
     for i in range(y.shape[0]):
         pred_tags.append([id_label_dict[_] for _ in y[i] if _])
 
     # 因为存在预测的标签长度与原来的标注长度不一致的情况，因此需要调整预测的标签
-    test_sents, test_tags = origin_test_X, origin_test_y
+    #test_sents, test_tags = origin_test_X, origin_test_y
+    test_sents = []
+    test_tags = []
+    for (sent_, tag_) in test_data:
+        test_sents.append(sent_)
+        test_tags.append(tag_)
     final_tags = []
     for test_tag, pred_tag in zip(test_tags, pred_tags):
         if len(test_tag) == len(pred_tag):
@@ -199,11 +207,11 @@ def train_model():
         elif len(test_tag) < len(pred_tag):
             final_tags.append(pred_tag[:len(test_tag)])
         else:
-            final_tags.append(pred_tag + ['O'] * (len(test_tag) - len(pred_tag)))
+            final_tags.append(pred_tag + ['o'] * (len(test_tag) - len(pred_tag)))
 
     # 利用seqeval对测试集进行验证
     print(classification_report(test_tags, final_tags, digits=4))
-    """
+
 
 if __name__ == '__main__':
     train_model()

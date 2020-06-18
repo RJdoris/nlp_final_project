@@ -5,43 +5,56 @@
 import numpy as np
 from keras.utils import to_categorical
 import pickle
-
-from bert.extract_feature import BertVector
+from tqdm import tqdm
+#from bert.extract_feature import BertVector
+from albert_zh.extract_feature import BertVector
+from dataset_pro import read_dictionary,random_embedding,label_id,read_data,data_generate
 from dataset import data_trans
-
 
 
 MAX_SEQ_LEN = 200 #训练集中最长语句长度为1080
 
+
 # 读取训练集，验证集和测试集原始数据
+
+label2id=label_id()
+train_data=read_data("dataset_pro/train.csv")
+dev_data=read_data("dataset_pro/dev.csv")
+test_data=read_data("dataset_pro/test.csv")
+word2id=read_dictionary("dataset_pro/train.pkl")
+
+
 _, origin_train_X, origin_train_y = data_trans('dataset/train.txt')
 _, origin_dev_X, origin_dev_y = data_trans('dataset/dev.txt')
 _, origin_test_X, origin_test_y = data_trans('dataset/test.txt')
 
-from tqdm import tqdm
+
+train_sent = []
+train_tag = []
+for (sent_, tag_) in train_data:
+    train_sent.append(''.join(sent_))
+    train_tag.append(tag_)
+
+dev_sent = []
+dev_tag = []
+for (sent_, tag_) in dev_data:
+    dev_sent.append(''.join(sent_))
+    dev_tag.append(tag_)
+
+test_sent = []
+test_tag = []
+for (sent_, tag_) in test_data:
+    test_sent.append(''.join(sent_))
+    test_tag.append(tag_)
+
+#train_X, train_Y = data_generate(train_data,word2id,label2id)
+#dev_X, dev_Y = data_generate(dev_data,word2id,label2id)
+#test_X, test_Y = data_generate(test_data,word2id,label2id)
 
 # 利用ALBERT提取文本特征
 bert_model = BertVector(pooling_strategy="NONE", max_seq_len=MAX_SEQ_LEN)
 f = lambda text: bert_model.encode([text])["encodes"][0]
 
-# 读取label2id字典
-label_id_dict = {
-  "O": 1,
-  "B-SUB": 2,
-  "I-SUB": 3,
-  "B-BOD": 4,
-  "I-BOD": 5,
-  "B-DEC": 6,
-  "I-DEC": 7,
-  "B-FRE": 8,
-  "I-FRE": 9,
-  "B-ITE": 10,
-  "I-ITE": 11,
-  "B-DIS": 12,
-  "I-DIS": 13,
-}
-
-id_label_dict = {v:k for k,v in label_id_dict.items()}
 
 
 # 载入数据
@@ -65,7 +78,8 @@ def input_data(sentences, tags):
     # 对y值统一长度为MAX_SEQ_LEN
     new_y = []
     for seq in tags:
-        num_tag = [label_id_dict[_] for _ in seq]
+        num_tag = [label2id[_] for _ in seq]
+        #num_tag = seq
         if len(seq) < MAX_SEQ_LEN:
             num_tag = num_tag + [0] * (MAX_SEQ_LEN-len(seq))
         else:
@@ -74,17 +88,17 @@ def input_data(sentences, tags):
         new_y.append(num_tag)
 
     # 将y中的元素编码成ont-hot encoding
-    y = np.empty(shape=(len(tags), MAX_SEQ_LEN, len(label_id_dict.keys())+1))
+    y = np.empty(shape=(len(tags), MAX_SEQ_LEN, len(label2id.keys())+1))
 
     for i, seq in enumerate(new_y):
-        y[i, :, :] = to_categorical(seq, num_classes=len(label_id_dict.keys())+1)
+        y[i, :, :] = to_categorical(seq, num_classes=len(label2id.keys())+1)
 
     return x, y
 
 
-train_x, train_y = input_data(origin_train_X, origin_train_y)
-dev_x, dev_y = input_data(origin_dev_X, origin_dev_y)
-test_x, test_y = input_data(origin_test_X, origin_test_y)
+train_x, train_y = input_data(train_sent, train_tag)
+dev_x, dev_y = input_data(dev_sent, dev_tag)
+test_x, test_y = input_data(test_sent, test_tag)
 
 with open('dataset/train_encode_text.txt', 'wb') as f:
     pickle.dump(train_x, f)
